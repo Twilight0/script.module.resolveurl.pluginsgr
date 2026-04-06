@@ -14,11 +14,11 @@ from resolveurl.lib import helpers
 from resolveurl.resolver import ResolveUrl, ResolverError
 
 
-class AlphaGR(ResolveUrl):
+class AlphaGRResolver(ResolveUrl):
 
     name = 'alphagr'
     domains = ['alphatv.gr']
-    pattern = r'(?://|\.)(alphatv\.gr)/(?:show/[\w-]+/(?:[\w-]+)?/\?vtype=player&vid=)?(news/.+|\d+&showId=\d+&year=\d{4}|live)'
+    pattern = r'(?://|\.)(alphatv\.gr)/((?:live|show/[\w-]+/\?vtype=player&vid=\d+&showId=\d{3,4}&year=\d{4}))'
     api_url = 'https://www.alphatv.gr/ajax/Isobar.AlphaTv.Components.PopUpVideo.PopUpVideo.PlayMedia/?vid={vid}&showId={show_id}&year={year}'
 
     def get_media_url(self, host, media_id):
@@ -50,10 +50,6 @@ class AlphaGR(ResolveUrl):
     def get_url(self, host, media_id):
 
         if media_id == 'live':
-
-            return self._default_get_url(host, media_id, template='https://www.{host}/{media_id}/')
-
-        elif 'news' in media_id:
 
             return self._default_get_url(host, media_id, template='https://www.{host}/{media_id}')
 
