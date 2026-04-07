@@ -39,7 +39,6 @@ class ArtliveResolver(ResolveUrl):
             if stream:
                 headers.update({'Referer': result})
                 stream = stream.group(1).replace('\\', '')
-                print(stream)
                 return stream + helpers.append_headers(headers)
             else:
                 raise ResolverError('No stream found')
