@@ -18,8 +18,7 @@ class AlphaGRResolver(ResolveUrl):
 
     name = 'alphagr'
     domains = ['alphatv.gr']
-    pattern = r'(?://|\.)(alphatv\.gr)/((?:live|show/[\w-]+/\?vtype=player&vid=\d+&showId=\d{3,4}&year=\d{4}))'
-    api_url = 'https://www.alphatv.gr/ajax/Isobar.AlphaTv.Components.PopUpVideo.PopUpVideo.PlayMedia/?vid={vid}&showId={show_id}&year={year}'
+    pattern = r'(?://|\.)(alphatv\.gr)/((?:live(?=/?$)|(?:series|show|newscast)/.*))/'
 
     def get_media_url(self, host, media_id):
 
@@ -29,7 +28,7 @@ class AlphaGRResolver(ResolveUrl):
 
         if media_id == 'live':
 
-            stream = re.search(r'data-liveurl="(https.+m3u8)"', res)
+            stream = re.search(r'video-url="(https.+m3u8)"', res)
 
             if stream:
                 stream = stream.group(1)
@@ -38,10 +37,10 @@ class AlphaGRResolver(ResolveUrl):
 
         else:
 
-            stream = re.search(r'(https.+mp4.+?)&quot', res)
+            stream = re.search(r'"embedUrl":"(.+.mp4)"', res)
 
             if stream:
-                stream = stream.group(1)
+                stream = stream.group(1).replace('\\', '')
             else:
                 raise ResolverError('Video not found')
 
@@ -49,17 +48,7 @@ class AlphaGRResolver(ResolveUrl):
 
     def get_url(self, host, media_id):
 
-        if media_id == 'live':
-
-            return self._default_get_url(host, media_id, template='https://www.{host}/{media_id}')
-
-        else:
-
-            vid, show_id, year = re.search(r'(\d+)&showId=(\d+)&year=(\d{4})', media_id).groups()
-
-            template = self.api_url.format(vid=vid, show_id=show_id, year=year)
-
-            return self._default_get_url(host, media_id, template=template)
+        return self._default_get_url(host, media_id, template='https://www.{host}/{media_id}/')
 
     @classmethod
     def _is_enabled(cls):
