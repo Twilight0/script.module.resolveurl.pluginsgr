@@ -8,14 +8,17 @@
     See LICENSES/GPL-3.0-only for more information.
 '''
 
-import base64
 import json
-import re
-from six.moves import urllib_parse
-import xbmc
-import xbmcaddon
+import os
+import sys
 from resolveurl import common
 from resolveurl.resolver import ResolveUrl, ResolverError
+
+_LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
+if _LIB_DIR not in sys.path:
+    sys.path.insert(0, _LIB_DIR)
+
+from moq_proxy import build_ws_proxy_url
 
 logger = common.log_utils.Logger.get_logger(__name__)
 logger.disable()
@@ -30,9 +33,6 @@ class VindralResolver(ResolveUrl):
     def get_media_url(self, host, media_id):
 
         headers = {'User-Agent': common.RAND_UA}
-
-        if not xbmc.getCondVisibility('System.HasAddon(plugin.video.alivegr)'):
-            raise ResolverError('AliveGR addon is required to play Vindral streams.')
 
         channel_id = media_id
         lb_url = f"https://lb.cdn.vindral.com/api/v4/connect?channelId={channel_id}"
@@ -56,13 +56,7 @@ class VindralResolver(ResolveUrl):
 
         logger.log_notice(f'VINDRAL_PROXY_URL: {url}')
 
-        ws_b64 = base64.urlsafe_b64encode(url.encode('utf-8')).decode('utf-8')
-        port = xbmcaddon.Addon('plugin.video.alivegr').getSetting('proxy_port') or '50199'
-        origin = urllib_parse.quote('https://www.megatv.com')
-
-        return 'http://127.0.0.1:{port}/mega.flv?ws={ws_b64}&origin={origin}'.format(
-            port=port, ws_b64=ws_b64, origin=origin
-        )
+        return build_ws_proxy_url(url, origin='https://www.megatv.com')
 
     def get_url(self, host, media_id):
         return f'https://lb.cdn.{host}/api/v4/connect?channelId={media_id}'
