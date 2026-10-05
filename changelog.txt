@@ -1,3 +1,11 @@
+Version 0.2.4 (October 5th, 2026)
+- Add YouTube video codecs multi-selection setting (defaulting to H.264 / avc1)
+- Support video codec filtering and prioritization in DASH MPD manifests via StandaloneContext
+
+Version 0.2.3 (October 5th, 2026)
+- Fix playlistgr plugin regex unpacking error
+- MoQ proxy: memoize dead GoogleVideo host failures and fast failover upstream for YouTube stream relay
+
 Version 0.2.2 (October 5th, 2026)
 - New playlistgr plugin
 - Youtube plugin now allows audio only option

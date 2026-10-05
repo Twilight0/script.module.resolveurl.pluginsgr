@@ -50,7 +50,24 @@ def _extract_subtitles(entry):
     return subtitles
 
 
-def _engine_context():
+def _get_video_codecs():
+    codecs = ['avc1']
+    try:
+        from kodi_six import xbmcaddon
+        raw = xbmcaddon.Addon(ADDON_ID).getSetting('yt_video_codecs')
+        if raw:
+            parsed = [c.strip() for c in raw.split(',') if c.strip()]
+            if parsed:
+                codecs = parsed
+    except Exception:
+        pass
+    return codecs
+
+
+def _engine_context(video_codecs=None):
+    if video_codecs is None:
+        video_codecs = _get_video_codecs()
+
     try:
         from kodi_six import xbmcvfs
         _translate = xbmcvfs.translatePath
@@ -76,7 +93,8 @@ def _engine_context():
         'special://profile/addon_data/{0}/'.format(ADDON_ID), tmp_base)
     context = StandaloneContext(
         data_dir=data_dir,
-        config_file=os.path.join(config_dir, 'ytresolver.json'))
+        config_file=os.path.join(config_dir, 'ytresolver.json'),
+        video_codecs=video_codecs)
     # Full adaptive ladder for inputstream.adaptive (which selects quality
     # on the fly): allow high-frame-rate streams (60fps content like Big
     # Buck Bunny is otherwise capped at 480p) and uncap the quality
@@ -87,7 +105,11 @@ def _engine_context():
         features = set(settings.stream_features())
         if 'hfr' not in features:
             features.add('hfr')
-            settings.stream_features(sorted(features))
+        if 'avc1' in video_codecs:
+            features.add('avc1')
+        elif video_codecs:
+            features.add(video_codecs[0])
+        settings.stream_features(sorted(features))
         settings.mpd_video_qualities(7)
     except Exception:
         pass

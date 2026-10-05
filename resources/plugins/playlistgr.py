@@ -19,7 +19,13 @@ class PlaylistGRResolver(ResolveUrl):
 
     name = 'PlaylistGR'
     domains = ['playlist.gr']
-    pattern = r'(?://|\.)(playlist\.gr)/(?:ajax\.php\?action=get_video&id=([\w-]+)|\?id=([\w-]+))'
+    pattern = r'(?://|\.)(playlist\.gr)/(?:ajax\.php\?action=get_video&id=|\?id=)([\w-]+)'
+
+    def get_host_and_id(self, url):
+        m = re.search(self.pattern, url)
+        if m:
+            return m.group(1), m.group(2)
+        return False
 
     def get_media_url(self, host, media_id, subs=False, audio_only=False):
 
