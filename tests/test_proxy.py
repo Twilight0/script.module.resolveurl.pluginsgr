@@ -428,7 +428,18 @@ class TestMoQProxy(unittest.TestCase):
                     timeout=5) as resp:
                 self.assertEqual(resp.status, 200)
                 self.assertEqual(resp.read(), b'data')
-        self.assertEqual(len(calls), 2)
+            self.assertEqual(len(calls), 2)
+
+            # Second request: bad.example is memoized as failed, so good.example is tried first.
+            with urllib.request.urlopen(
+                    f'http://127.0.0.1:{actual}/youtube/stream?__host=bad.example'
+                    '&__host=good.example&__path=/videoplayback&itag=22',
+                    timeout=5) as resp:
+                self.assertEqual(resp.status, 200)
+                self.assertEqual(resp.read(), b'data')
+            self.assertEqual(len(calls), 3)
+            self.assertTrue(calls[2].startswith('https://good.example/videoplayback'))
+
         moq_proxy.stop_server()
 
     def test_youtube_plugin_wiring(self):
