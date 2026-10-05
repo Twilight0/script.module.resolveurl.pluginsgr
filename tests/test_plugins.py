@@ -127,6 +127,7 @@ class TestPluginsGR(unittest.TestCase):
             ('ant1cy', 'https://www.ant1live.com/webtv/live'),
             ('bigbang', 'https://www.bigbang.gr/movie.asp?id=1'),
             ('dailymotion', 'https://www.dailymotion.com/video/x7tgad0'),
+            ('greekmovies', 'https://greek-movies.com/view.php?v=iXFXDc_Bz6pM-5Iw747KxQ'),
             ('grnet', 'https://diavlos-cache.cnt.grnet.gr/app/index.html#/el/embed/room/6015'),
             ('ioniantv', 'https://ioniantv.gr/live'),
             ('kick', 'https://kick.com/madtvgreece'),

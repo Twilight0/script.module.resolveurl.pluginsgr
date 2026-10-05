@@ -626,6 +626,57 @@ class TestMoQProxy(unittest.TestCase):
         import moq_proxy
         moq_proxy.stop_server()
 
+    def test_greekmovies_front_end_dispatch(self):
+        import importlib
+        import re
+        from unittest import mock
+        from resolveurl.resolver import ResolverError
+        mod = importlib.import_module('greekmovies')
+        cls = next(
+            c for n, c in vars(mod).items()
+            if isinstance(c, type) and c.__name__ == 'GreekMoviesResolver'
+        )
+        m = re.search(cls.pattern, 'https://greek-movies.com/view.php?v=iXFXDc_Bz6pM-5Iw747KxQ')
+        self.assertIsNotNone(m)
+
+        class FakeResp:
+            def __init__(self, content):
+                self.content = content
+
+        def make_inst(html):
+            inst = cls()
+
+            class FakeNet:
+                def http_GET(self, url, headers=None):
+                    return FakeResp(html)
+
+            inst.net = FakeNet()
+            return inst
+
+        alpha_html = ('<html><body><a href="https://www.alphatv.gr/series/x/episode/1-s1-e1/">watch</a>'
+                      '</body></html>')
+        with mock.patch('resolveurl.resolve', return_value='https://cdn.example/v.mp4') as r:
+            resolved = make_inst(alpha_html).get_media_url('greek-movies.com', 'iXFXDc_Bz6pM-5Iw747KxQ')
+            self.assertEqual(resolved, 'https://cdn.example/v.mp4')
+            r.assert_called_once_with('https://www.alphatv.gr/series/x/episode/1-s1-e1/')
+
+        yt_html = ('<html><body><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ"></iframe>'
+                   '</body></html>')
+        with mock.patch('resolveurl.resolve', return_value='https://cdn.yt/v.mp4') as r:
+            resolved = make_inst(yt_html).get_media_url('greek-movies.com', 'iXFXDc_Bz6pM-5Iw747KxQ')
+            self.assertEqual(resolved, 'https://cdn.yt/v.mp4')
+            r.assert_called_once_with('https://www.youtube.com/embed/dQw4w9WgXcQ')
+
+        # Subs callers always get a tuple.
+        with mock.patch('resolveurl.resolve', return_value='https://cdn.yt/v.mp4'):
+            stream_url, subtitles = make_inst(yt_html).get_media_url(
+                'greek-movies.com', 'iXFXDc_Bz6pM-5Iw747KxQ', subs=True)
+            self.assertEqual(subtitles, {})
+
+        with self.assertRaises(ResolverError):
+            make_inst('<html><body>no video here</body></html>').get_media_url(
+                'greek-movies.com', 'iXFXDc_Bz6pM-5Iw747KxQ')
+
     def test_no_legacy_shims(self):
         with open(os.path.join(conftest.REPO_ROOT, 'resources', 'lib', 'moq_proxy.py'), encoding='utf-8') as f:
             src = f.read()
