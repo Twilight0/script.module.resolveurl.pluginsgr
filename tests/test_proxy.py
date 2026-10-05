@@ -451,8 +451,8 @@ class TestMoQProxy(unittest.TestCase):
             def __init__(self, context=None):
                 pass
 
-            def load_stream_info(self, video_id=None, use_mpd=None):
-                self._seen = (video_id, use_mpd)
+            def load_stream_info(self, video_id=None, use_mpd=None, audio_only=None):
+                self._seen = (video_id, use_mpd, audio_only)
                 return [entry], {}
 
         with mock.patch.object(mod, 'YouTubePlayerClient', FakeClient), \
@@ -676,6 +676,54 @@ class TestMoQProxy(unittest.TestCase):
         with self.assertRaises(ResolverError):
             make_inst('<html><body>no video here</body></html>').get_media_url(
                 'greek-movies.com', 'iXFXDc_Bz6pM-5Iw747KxQ')
+
+    def test_youtube_audio_only_picks_best(self):
+        import importlib
+        mod = importlib.import_module('youtube')
+        cls = next(
+            c for n, c in vars(mod).items()
+            if isinstance(c, type) and c.__name__ == 'YouTubeGRResolver'
+        )
+        entries = [
+            {'url': 'https://rr1.googlevideo.com/vp?itag=140',
+             'audio': {'bitrate': 128, 'codec': 'aac'}},
+            {'url': 'https://rr1.googlevideo.com/vp?itag=251',
+             'audio': {'bitrate': 160, 'codec': 'opus'},
+             'subtitles': [{'lang': 'en', 'url': 'https://example.com/en.vtt'}]},
+            {'url': 'https://rr1.googlevideo.com/vp?itag=134',
+             'audio': {'bitrate': 0, 'codec': ''},
+             'video': {'height': 360, 'codec': 'avc1'}},
+        ]
+
+        class FakeClient:
+            def __init__(self, context=None):
+                pass
+
+            def load_stream_info(self, video_id=None, use_mpd=None, audio_only=None):
+                self._seen = (video_id, use_mpd, audio_only)
+                return list(entries), {}
+
+        from unittest import mock
+        with mock.patch.object(mod, 'YouTubePlayerClient', FakeClient):
+            inst = cls()
+            resolved = inst.get_media_url('youtube.com', 'aqz-KE-bpKQ', audio_only=True)
+            self.assertTrue(resolved.startswith('https://rr1.googlevideo.com/vp?itag=251'))
+            self.assertIn('User-Agent=', resolved)
+            self.assertNotIn('127.0.0.1', resolved)
+            stream_url, subtitles = inst.get_media_url(
+                'youtube.com', 'aqz-KE-bpKQ', subs=True, audio_only=True)
+            self.assertEqual(subtitles, {'en': 'https://example.com/en.vtt'})
+
+    def test_youtube_audio_only_live(self):
+        import importlib
+        mod = importlib.import_module('youtube')
+        cls = next(
+            c for n, c in vars(mod).items()
+            if isinstance(c, type) and c.__name__ == 'YouTubeGRResolver'
+        )
+        resolved = cls().get_media_url('youtube.com', 'aqz-KE-bpKQ', audio_only=True)
+        self.assertTrue(resolved.startswith('https://'))
+        self.assertNotIn('127.0.0.1', resolved)
 
     def test_no_legacy_shims(self):
         with open(os.path.join(conftest.REPO_ROOT, 'resources', 'lib', 'moq_proxy.py'), encoding='utf-8') as f:
