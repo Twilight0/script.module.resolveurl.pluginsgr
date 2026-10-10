@@ -27,6 +27,11 @@ class AnaconResolver(ResolveUrl):
     domains = ['anacon.org', 'lakatamia.tv']
     pattern = r'(?://|\.)(anacon\.org|lakatamia\.tv)/app/chans/(?:gr|cy)/([a-zA-Z0-9_\-]+(?:image|img|cyprus|greece)?\.php)'
 
+    # File-backed resolve cache (ResolveURL's own): the minted WMSAuth token
+    # is valid ~20 minutes, so 0.25h keeps replays/zaps/retries on one token
+    # instead of re-minting (and re-hitting the edge) every play. No-op when
+    # the host addon's use_cache setting is off.
+    @common.cache.cache_method(cache_limit=0.25)
     def get_media_url(self, host, media_id):
         web_url = self.get_url(host, media_id)
 

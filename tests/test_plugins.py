@@ -32,11 +32,15 @@ class TestPluginsGR(unittest.TestCase):
 
     def _get_resolver_class(self, module_name):
         mod = importlib.import_module(module_name)
+        fallback = None
         for attr_name in dir(mod):
             attr = getattr(mod, attr_name)
             if inspect.isclass(attr) and issubclass(attr, ResolveUrl) and attr is not ResolveUrl:
-                return attr
-        return None
+                if getattr(attr, '__module__', None) == mod.__name__:
+                    return attr
+                if fallback is None and attr.__name__.endswith('Resolver'):
+                    fallback = attr
+        return fallback
 
     def test_all_plugins_import_and_instantiate(self):
         """Ensure all plugin scripts define a valid ResolveUrl subclass that can be instantiated."""

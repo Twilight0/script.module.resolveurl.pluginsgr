@@ -742,6 +742,134 @@ class TestMoQProxy(unittest.TestCase):
         self.assertIn('/youtube/stream', resolved)
         self.assertTrue(resolved.startswith('http://127.0.0.1:'))
 
+    def test_anacon_resolve_caches_token_url(self):
+        import importlib
+        import json as _json
+        import tempfile
+        from unittest import mock
+        import resolveurl.lib.cache as rcache
+        mod = importlib.import_module('anacon')
+        cls = next(
+            c for n, c in vars(mod).items()
+            if isinstance(c, type) and c.__name__ == 'AnaconResolver'
+        )
+        calls = []
+
+        class FakeResp:
+            def __init__(self, payload):
+                self._payload = payload
+
+            @property
+            def json(self):
+                return self._payload
+
+            @property
+            def content(self):
+                return self._payload if isinstance(self._payload, str) else ''
+
+        def make_inst():
+            inst = cls()
+
+            class FakeNet:
+                def http_POST(self, url, form_data=None, headers=None, **kwargs):
+                    calls.append(url)
+                    if 'workers.dev' in url:
+                        return FakeResp({'status': 'ok', 'token': 'tok',
+                                         'userAgent': 'UA'})
+                    return FakeResp('<html>https://s2.cystream.net/live/megagr/playlist.m3u8?wmsAuthSign=abc</html>')
+
+            inst.net = FakeNet()
+            return inst
+
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(rcache, 'cache_enabled', True), \
+                mock.patch.object(rcache, 'cache_path', tmp):
+            first = make_inst().get_media_url('lakatamia.tv', 'megaimage.php')
+            second = make_inst().get_media_url('lakatamia.tv', 'megaimage.php')
+            self.assertEqual(first, second)
+            # One worker POST + one page POST only; the replay served cache.
+            self.assertEqual(len(calls), 2)
+            third = make_inst().get_media_url('lakatamia.tv', 'otherimage.php')
+            self.assertEqual(len(calls), 4)
+
+    def test_anacon_edge_health(self):
+        # Single-shot s2 health check: fresh resolve + one manifest fetch.
+        import importlib
+        import urllib.error
+        mod = importlib.import_module('anacon')
+        cls = next(
+            c for n, c in vars(mod).items()
+            if isinstance(c, type) and c.__name__ == 'AnaconResolver'
+        )
+        url = cls().get_media_url('lakatamia.tv', 'megaimage.php').split('|')[0]
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                body = resp.read()
+        except urllib.error.HTTPError as e:
+            self.fail(f's2 edge health check failed: HTTP {e.code}')
+        self.assertTrue(body.startswith(b'#EXTM3U'), 'not a manifest')
+        moq_proxy.stop_server()
+
+    def test_anacon_token_freshness_and_s1_control(self):
+        # Token sanity (server_time within validminutes window) + s1 control
+        # proving failures are s2-specific, not IP-wide.
+        import base64
+        import datetime
+        import importlib
+        import re
+        import urllib.error
+        mod = importlib.import_module('anacon')
+        cls = next(
+            c for n, c in vars(mod).items()
+            if isinstance(c, type) and c.__name__ == 'AnaconResolver'
+        )
+        url = cls().get_media_url('lakatamia.tv', 'megaimage.php').split('|')[0]
+        token = url.split('wmsAuthSign=')[1].split('&')[0]
+        decoded = base64.b64decode(token + '===').decode('utf-8', errors='replace')
+        stamp = re.search(r'server_time=(.*?)&hash_value=', decoded)
+        window = re.search(r'validminutes=(\d+)', decoded)
+        self.assertIsNotNone(stamp, f'unexpected token shape: {decoded[:80]}')
+        minted = datetime.datetime.strptime(stamp.group(1), '%m/%d/%Y %I:%M:%S %p')
+        age = (datetime.datetime.utcnow() - minted).total_seconds()
+        self.assertLess(age, int(window.group(1)) * 60 if window else 1200,
+                        f'stale token: {age:.0f}s old')
+        req = urllib.request.Request('https://s1.cystream.net/live/faros1/playlist.m3u8',
+                                     headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            self.assertEqual(resp.status, 200)
+        moq_proxy.stop_server()
+
+    def test_anacon_edge_flap_detector(self):
+        # Flap detector: spaced resolve+fetch samples. A healthy edge
+        # returns all 200s (~4 min runtime by design; spacing avoids
+        # tripping flood protection and polluting samples).
+        import importlib
+        import time
+        import urllib.error
+        mod = importlib.import_module('anacon')
+        cls = next(
+            c for n, c in vars(mod).items()
+            if isinstance(c, type) and c.__name__ == 'AnaconResolver'
+        )
+        results = []
+        for i in range(1, 5):
+            url = cls().get_media_url('lakatamia.tv', 'megaimage.php').split('|')[0]
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            try:
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    results.append((i, resp.status))
+            except urllib.error.HTTPError as e:
+                results.append((i, e.code))
+            except Exception as e:
+                results.append((i, type(e).__name__))
+            if i < 4:
+                time.sleep(45)
+        print('s2 flap samples:', results)
+        bad = [r for r in results if r[1] != 200]
+        self.assertEqual(bad, [], f's2 edge flapping: {results}')
+        moq_proxy.stop_server()
+
     def test_no_legacy_shims(self):
         with open(os.path.join(conftest.REPO_ROOT, 'resources', 'lib', 'moq_proxy.py'), encoding='utf-8') as f:
             src = f.read()
