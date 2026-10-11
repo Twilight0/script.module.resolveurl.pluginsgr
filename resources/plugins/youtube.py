@@ -91,7 +91,13 @@ def _engine_context(video_codecs=None):
             for candidate in (os.environ.get('TMPDIR'), os.environ.get('TEMP'), os.environ.get('TMP'), '/data/local/tmp'):
                 if candidate and os.path.isdir(candidate):
                     return os.path.join(candidate, 'ytresolver')
-            return os.path.join(os.path.abspath('.'), 'ytresolver')
+            try:
+                prof = xbmcaddon.Addon(ADDON_ID).getAddonInfo('profile')
+                if prof:
+                    return os.path.join(prof, 'ytresolver')
+            except Exception:
+                pass
+            return os.path.join(tempfile.tempdir or '/tmp', 'ytresolver')
 
     def _real(path):
         try:
@@ -105,10 +111,12 @@ def _engine_context(video_codecs=None):
 
     data_dir = _real('special://temp/ytresolver/')
     # Engine settings must live in addon userdata (Kodi) or temp (tests),
-    # never in the addon code folder / process CWD (the standalone default
-    # is `os.getcwd()/config.json`).
-    config_dir = _real(
-        'special://profile/addon_data/{0}/'.format(ADDON_ID))
+    # never in the addon code folder / process CWD.
+    try:
+        prof = xbmcaddon.Addon(ADDON_ID).getAddonInfo('profile')
+    except Exception:
+        prof = None
+    config_dir = _real(prof or 'special://profile/addon_data/{0}/'.format(ADDON_ID))
     context = StandaloneContext(
         data_dir=data_dir,
         config_file=os.path.join(config_dir, 'ytresolver.json'),

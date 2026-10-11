@@ -1069,6 +1069,7 @@ class TestMoQProxy(unittest.TestCase):
     def test_youtube_android_tempdir_fallback(self):
         from unittest import mock
         import importlib
+        import tempfile
         mod = importlib.import_module('youtube')
         # Simulate Android where tempfile.gettempdir() raises FileNotFoundError
         # because /tmp, /var/tmp, /usr/tmp do not exist.
@@ -1079,10 +1080,13 @@ class TestMoQProxy(unittest.TestCase):
 
         # Worst-case simulation: xbmcvfs translation fails AND tempfile fails
         from kodi_six import xbmcvfs
-        with mock.patch.object(xbmcvfs, 'translatePath', return_value=None), \
-             mock.patch('tempfile.gettempdir', side_effect=err):
-            ctx = mod._engine_context()
-            self.assertIsNotNone(ctx)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            with mock.patch.object(xbmcvfs, 'translatePath', return_value=None), \
+                 mock.patch('tempfile.gettempdir', side_effect=err), \
+                 mock.patch('kodi_six.xbmcaddon.Addon.getAddonInfo', return_value=tmp_dir):
+                ctx = mod._engine_context()
+                self.assertIsNotNone(ctx)
+                self.assertFalse(os.path.exists(os.path.join(os.path.abspath('.'), 'ytresolver')))
 
 
 if __name__ == '__main__':

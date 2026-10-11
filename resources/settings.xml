@@ -28,6 +28,31 @@
 						<hidevalue>true</hidevalue>
 					</control>
 				</setting>
+				<setting id="instagram_carousel_select" type="string" label="30068" help="30069">
+					<level>0</level>
+					<default>ask</default>
+					<constraints>
+						<options>
+							<option label="30070">ask</option>
+							<option label="30071">first</option>
+							<option label="30072">largest</option>
+						</options>
+					</constraints>
+					<control type="list" format="string">
+						<heading>30068</heading>
+						<multiselect>false</multiselect>
+					</control>
+				</setting>
+				<setting id="instagram_cookies" type="string" label="30066" help="30067">
+					<level>0</level>
+					<default></default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading>30066</heading>
+					</control>
+				</setting>
 			</group>
 		</category>
 		<category id="plugins" label="30001">
@@ -166,33 +191,6 @@
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
-				</setting>
-			</group>
-			<group id="3" label="30004">
-				<setting id="instagram_cookies" type="string" label="30066" help="30067">
-					<level>0</level>
-					<default></default>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-					<control type="edit">
-						<heading>30066</heading>
-					</control>
-				</setting>
-				<setting id="instagram_carousel_select" type="string" label="30068" help="30069">
-					<level>0</level>
-					<default>ask</default>
-					<constraints>
-						<options>
-							<option label="30070">ask</option>
-							<option label="30071">first</option>
-							<option label="30072">largest</option>
-						</options>
-					</constraints>
-					<control type="list" format="string">
-						<heading>30068</heading>
-						<multiselect>false</multiselect>
-					</control>
 				</setting>
 			</group>
 		</category>
