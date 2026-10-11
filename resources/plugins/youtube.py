@@ -37,6 +37,16 @@ except ImportError:
     YT_ENGINE_AVAILABLE = False
 
 
+try:
+    from kodi_six import xbmcvfs
+    _kodi_temp = xbmcvfs.translatePath('special://temp')
+    if _kodi_temp and not _kodi_temp.startswith('special://'):
+        os.makedirs(_kodi_temp, exist_ok=True)
+        tempfile.tempdir = _kodi_temp
+except Exception:
+    pass
+
+
 def _extract_subtitles(entry):
     subtitles = {}
     try:
@@ -74,23 +84,31 @@ def _engine_context(video_codecs=None):
     except Exception:
         _translate = None
 
-    def _real(path, fallback):
+    def _fallback_tmp():
+        try:
+            return os.path.join(tempfile.gettempdir(), 'ytresolver')
+        except Exception:
+            for candidate in (os.environ.get('TMPDIR'), os.environ.get('TEMP'), os.environ.get('TMP'), '/data/local/tmp'):
+                if candidate and os.path.isdir(candidate):
+                    return os.path.join(candidate, 'ytresolver')
+            return os.path.join(os.path.abspath('.'), 'ytresolver')
+
+    def _real(path):
         try:
             out = _translate(path) if _translate else None
         except Exception:
             out = None
         if not out or out.startswith('special://'):
-            out = fallback
+            out = _fallback_tmp()
         os.makedirs(out, exist_ok=True)
         return out
 
-    tmp_base = os.path.join(tempfile.gettempdir(), 'ytresolver')
-    data_dir = _real('special://temp/ytresolver/', tmp_base)
+    data_dir = _real('special://temp/ytresolver/')
     # Engine settings must live in addon userdata (Kodi) or temp (tests),
     # never in the addon code folder / process CWD (the standalone default
     # is `os.getcwd()/config.json`).
     config_dir = _real(
-        'special://profile/addon_data/{0}/'.format(ADDON_ID), tmp_base)
+        'special://profile/addon_data/{0}/'.format(ADDON_ID))
     context = StandaloneContext(
         data_dir=data_dir,
         config_file=os.path.join(config_dir, 'ytresolver.json'),

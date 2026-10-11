@@ -1066,6 +1066,24 @@ class TestMoQProxy(unittest.TestCase):
         with mock.patch('kodi_six.xbmcaddon.Addon.getSetting', return_value='avc1,vp9'):
             self.assertEqual(mod._get_video_codecs(), ['avc1', 'vp9'])
 
+    def test_youtube_android_tempdir_fallback(self):
+        from unittest import mock
+        import importlib
+        mod = importlib.import_module('youtube')
+        # Simulate Android where tempfile.gettempdir() raises FileNotFoundError
+        # because /tmp, /var/tmp, /usr/tmp do not exist.
+        err = FileNotFoundError(2, "No usable temporary directory found in ['/tmp', '/var/tmp', '/usr/tmp', '/']")
+        with mock.patch('tempfile.gettempdir', side_effect=err):
+            ctx = mod._engine_context()
+            self.assertIsNotNone(ctx)
+
+        # Worst-case simulation: xbmcvfs translation fails AND tempfile fails
+        from kodi_six import xbmcvfs
+        with mock.patch.object(xbmcvfs, 'translatePath', return_value=None), \
+             mock.patch('tempfile.gettempdir', side_effect=err):
+            ctx = mod._engine_context()
+            self.assertIsNotNone(ctx)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
