@@ -27,5 +27,169 @@
 				</setting>
 			</group>
 		</category>
+		<category id="plugins" label="Plugins">
+			<group id="2" label="Enable/disable resolvers">
+				<setting id="AeolosTVResolver_enabled" type="boolean" label="Aeolos TV" help="Enable or disable the Aeolos TV resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="AlphaCYResolver_enabled" type="boolean" label="Alpha Digital (Cyprus)" help="Enable or disable the Alpha Digital (Cyprus) resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="AlphaGRResolver_enabled" type="boolean" label="Alpha Digital (Greece)" help="Enable or disable the Alpha Digital (Greece) resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="AnaconResolver_enabled" type="boolean" label="Anacon" help="Enable or disable the Anacon resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="Ant1CYResolver_enabled" type="boolean" label="ANT1 (Cyprus)" help="Enable or disable the ANT1 (Cyprus) resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="Ant1GRResolver_enabled" type="boolean" label="Antenna (Greece)" help="Enable or disable the Antenna (Greece) resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="BigBangGR_enabled" type="boolean" label="Big Bang GR" help="Enable or disable the Big Bang GR resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="DailymotionResolver_enabled" type="boolean" label="Dailymotion" help="Enable or disable the Dailymotion resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="EltubeResolver_enabled" type="boolean" label="Eltube" help="Enable or disable the Eltube resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="EuronewsGRResolver_enabled" type="boolean" label="Euronews" help="Enable or disable the Euronews resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="GreekMoviesResolver_enabled" type="boolean" label="Greek Movies" help="Enable or disable the Greek Movies resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="GrnetResolver_enabled" type="boolean" label="GRnet" help="Enable or disable the GRnet resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="InstagramResolver_enabled" type="boolean" label="Instagram" help="Enable or disable the Instagram resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="IonianTVResolver_enabled" type="boolean" label="Ionian TV" help="Enable or disable the Ionian TV resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="KickResolver_enabled" type="boolean" label="Kick" help="Enable or disable the Kick resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="MegaTVResolver_enabled" type="boolean" label="Mega TV" help="Enable or disable the Mega TV resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="OmegaCYResolver_enabled" type="boolean" label="Omega TV (Cyprus)" help="Enable or disable the Omega TV (Cyprus) resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="OpenTVResolver_enabled" type="boolean" label="Open TV" help="Enable or disable the Open TV resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="PlaylistGRResolver_enabled" type="boolean" label="PlaylistGR" help="Enable or disable the PlaylistGR resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="RikResolver_enabled" type="boolean" label="RIK" help="Enable or disable the RIK resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="SigmaResolver_enabled" type="boolean" label="Sigma TV" help="Enable or disable the Sigma TV resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="SkaiResolver_enabled" type="boolean" label="Skai" help="Enable or disable the Skai resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="StarResolver_enabled" type="boolean" label="Star Channel" help="Enable or disable the Star Channel resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="TV100Resolver_enabled" type="boolean" label="TV100" help="Enable or disable the TV100 resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="TwitchResolver_enabled" type="boolean" label="Twitch" help="Enable or disable the Twitch resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="VindralResolver_enabled" type="boolean" label="Vindral" help="Enable or disable the Vindral resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="YouTubeGRResolver_enabled" type="boolean" label="YouTube" help="Enable or disable the YouTube resolver.">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="instagram_cookies" type="path" label="Instagram session cookies" help="Path to a cookies file exported from a logged-in browser (Netscape format, or JSON), or a raw Cookie header string. Instagram blocks anonymous access to most posts, so this is usually required.">
+					<level>0</level>
+					<default></default>
+					<constraints>
+						<allowempty>true</allowempty>
+						<writable>true</writable>
+					</constraints>
+					<control type="edit" format="path">
+						<heading>Instagram session cookies</heading>
+					</control>
+				</setting>
+				<setting id="instagram_carousel_select" type="string" label="Instagram carousel handling" help="What to do when a post contains multiple media items.">
+					<level>0</level>
+					<default>ask</default>
+					<constraints>
+						<options>
+							<option label="Ask every time">ask</option>
+							<option label="Always first item">first</option>
+							<option label="Always highest quality">largest</option>
+						</options>
+					</constraints>
+					<control type="list" format="string">
+						<multiselect>false</multiselect>
+					</control>
+				</setting>
+			</group>
+		</category>
 	</section>
 </settings>

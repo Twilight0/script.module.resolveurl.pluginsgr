@@ -1,3 +1,7 @@
+Version 0.3.0 (October 11th, 2026)
+- Improved youtube plugin by adding visionos client
+- Added plugin toggles to set their enabled state
+
 Version 0.2.6 (October 10th, 2026)
 - Add youtube audio stream metadata
 

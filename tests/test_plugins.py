@@ -172,6 +172,127 @@ class TestPluginsGR(unittest.TestCase):
                 except Exception as e:
                     self.fail(f"Unexpected error in {mod_name}: {type(e).__name__}: {e}")
 
+    def test_plugin_toggles_match_settings_xml(self):
+        """Every plugin_enabled() call must have a matching setting, and vice versa.
+
+        Guards against adding a resolver toggle to one side only, which would
+        silently leave the plugin permanently on (or permanently off) with no
+        UI control to change it.
+        """
+        import xml.etree.ElementTree as ET
+        from unittest import mock
+
+        settings = os.path.join(conftest.REPO_ROOT, 'resources', 'settings.xml')
+        declared = {
+            s.get('id') for s in ET.parse(settings).getroot().iter('setting')
+            if (s.get('id') or '').endswith('_enabled')
+        }
+
+        used = set()
+        for path in glob.glob(os.path.join(self.plugins_dir, '*.py')):
+            with open(path, encoding='utf-8') as fh:
+                source = fh.read()
+            used.update(re.findall(r"plugin_enabled\('([^']+)'\)", source))
+
+        self.assertTrue(used, 'no plugin_enabled() calls found')
+        # plugin_settings.plugin_enabled(name) reads '<name>_enabled'.
+        expected = {'%s_enabled' % name for name in used}
+        self.assertEqual(
+            sorted(expected - declared), [],
+            'plugin_enabled() called but no setting declared')
+        self.assertEqual(
+            sorted(declared - expected), [],
+            'setting declared but never consulted by any resolver')
+
+        # And the toggles must actually flip the resolver's own gate.
+        import plugin_settings
+
+        class FakeAddon:
+            def __init__(self, values):
+                self.values = values
+
+            def getSetting(self, key):
+                return self.values.get(key, '')
+
+        sample = ['youtube', 'dailymotion', 'instagram']
+        for mod_name in sample:
+            mod = importlib.import_module(mod_name)
+            resolver = [c for c in vars(mod).values()
+                        if inspect.isclass(c) and issubclass(c, ResolveUrl)
+                        and c is not ResolveUrl and c.__module__ == mod_name][0]
+            name = resolver.__name__
+            with mock.patch.object(plugin_settings.xbmcaddon, 'Addon',
+                                   lambda _id: FakeAddon({})):
+                self.assertTrue(resolver._is_enabled(), f'{name} default should be enabled')
+            with mock.patch.object(plugin_settings.xbmcaddon, 'Addon',
+                                   lambda _id: FakeAddon({f'{name}_enabled': 'false'})):
+                self.assertFalse(resolver._is_enabled(), f'{name} toggle did not disable it')
+
+    def test_referenced_settings_are_declared(self):
+        """Every setting id this addon reads must exist in settings.xml.
+
+        An undeclared id reads back as '' forever, so the feature looks
+        implemented but never takes effect.
+        """
+        import xml.etree.ElementTree as ET
+
+        settings = os.path.join(conftest.REPO_ROOT, 'resources', 'settings.xml')
+        declared = {
+            s.get('id') for s in ET.parse(settings).getroot().iter('setting')
+        }
+
+        resources = os.path.join(conftest.REPO_ROOT, 'resources')
+        referenced = set()
+        for path in glob.glob(os.path.join(resources, '**', '*.py'), recursive=True):
+            if 'ytresolver' in path:
+                # Vendored engine reads settings of *other* addons.
+                continue
+            with open(path, encoding='utf-8') as fh:
+                source = fh.read()
+            referenced.update(re.findall(r"get_setting\(\s*['\"]([^'\"]+)['\"]", source))
+            referenced.update(re.findall(r"_SETTING_\w+\s*=\s*['\"]([^'\"]+)['\"]", source))
+
+        self.assertTrue(referenced, 'no settings references found')
+        self.assertEqual(
+            sorted(referenced - declared), [],
+            'settings read by code but not declared in settings.xml')
+
+    def test_instagram_carousel_modes(self):
+        """Carousel setting: ask shows the dialog, first/largest bypass it."""
+        from unittest import mock
+        import xbmcgui
+
+        import instagram
+
+        items = [
+            {'label': 'small', 'thumb': 'https://x/s320x320/a.jpg', 'url': 'u1'},
+            {'label': 'huge', 'thumb': 'https://x/s1080x1350/b.jpg', 'url': 'u2'},
+        ]
+        resolver = instagram.InstagramResolver()
+
+        for mode, expect_dialog, expect_url in [
+            (None, True, 'u2'),      # unset -> ask, dialog index 1
+            ('ask', True, 'u2'),
+            ('first', False, 'u1'),
+            ('largest', False, 'u2'),
+        ]:
+            calls = []
+            values = {} if mode is None else {'instagram_carousel_select': mode}
+            with mock.patch.object(instagram, 'get_setting',
+                                   side_effect=lambda k, d='': values.get(k, d)), \
+                 mock.patch.object(xbmcgui.Dialog, 'select',
+                                   side_effect=lambda *a, **k: (calls.append(1), 1)[1]):
+                got = resolver._choose_media(items)['url']
+            self.assertEqual(bool(calls), expect_dialog,
+                             f'carousel mode {mode!r}: dialog shown={bool(calls)}')
+            self.assertEqual(got, expect_url, f'carousel mode {mode!r}')
+
+        # A single-item post must never prompt.
+        with mock.patch.object(instagram, 'get_setting', return_value='ask'), \
+             mock.patch.object(xbmcgui.Dialog, 'select') as sel:
+            self.assertEqual(resolver._choose_media([items[0]])['url'], 'u1')
+        sel.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

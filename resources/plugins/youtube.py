@@ -149,6 +149,12 @@ def _read_engine_mpd(video_id):
         return None
 
 
+_LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
+if _LIB_DIR not in sys.path:
+    sys.path.insert(0, _LIB_DIR)
+
+from plugin_settings import plugin_enabled
+
 class YouTubeGRResolver(ResolveUrl):
     name = 'YouTubeGR'
     domains = ['youtube.com', 'youtu.be', 'youtube-nocookie.com']
@@ -224,7 +230,7 @@ class YouTubeGRResolver(ResolveUrl):
 
     @classmethod
     def _is_enabled(cls):
-        return True
+        return plugin_enabled('YouTubeGRResolver')
 
     @classmethod
     def _get_priority(cls):

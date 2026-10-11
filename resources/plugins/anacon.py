@@ -8,6 +8,8 @@
     See LICENSES/GPL-3.0-only for more information.
 '''
 
+import os
+import sys
 import re
 from six.moves import urllib_parse
 
@@ -20,6 +22,12 @@ from resolveurl.resolver import ResolveUrl, ResolverError
 PROXY_ENDPOINT = 'https://anacon-token-proxy.twilight0.workers.dev'
 PROXY_SIGNATURE = 'alivegr-proxy-auth-987234'
 
+
+_LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib')
+if _LIB_DIR not in sys.path:
+    sys.path.insert(0, _LIB_DIR)
+
+from plugin_settings import plugin_enabled
 
 class AnaconResolver(ResolveUrl):
 
@@ -95,4 +103,4 @@ class AnaconResolver(ResolveUrl):
 
     @classmethod
     def _is_enabled(cls):
-        return True
+        return plugin_enabled('AnaconResolver')

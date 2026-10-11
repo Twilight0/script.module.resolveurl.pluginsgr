@@ -428,7 +428,8 @@ class TestMoQProxy(unittest.TestCase):
                     timeout=5) as resp:
                 self.assertEqual(resp.status, 200)
                 self.assertEqual(resp.read(), b'data')
-            self.assertEqual(len(calls), 2)
+            # bad.example: POST fails, GET fallback fails; good.example: POST serves.
+            self.assertEqual(len(calls), 3)
 
             # Second request: bad.example is memoized as failed, so good.example is tried first.
             with urllib.request.urlopen(
@@ -437,8 +438,26 @@ class TestMoQProxy(unittest.TestCase):
                     timeout=5) as resp:
                 self.assertEqual(resp.status, 200)
                 self.assertEqual(resp.read(), b'data')
-            self.assertEqual(len(calls), 3)
-            self.assertTrue(calls[2].startswith('https://good.example/videoplayback'))
+            self.assertEqual(len(calls), 4)
+            self.assertTrue(calls[3].startswith('https://good.example/videoplayback'))
+
+        # GET fallback: POST 403s, plain GET on the same host serves.
+        seen_methods = []
+
+        def post_fails(url, headers, method='GET', timeout=20):
+            seen_methods.append(method)
+            if method == 'POST':
+                raise urllib.error.HTTPError(url, 403, 'Forbidden', {}, None)
+            return b'fallback-bytes', {'Content-Type': 'video/mp4'}
+
+        with mock.patch.object(moq_proxy, '_fetch_upstream', side_effect=post_fails):
+            with urllib.request.urlopen(
+                    f'http://127.0.0.1:{actual}/youtube/stream?__host=h2.example'
+                    '&__path=/videoplayback&__method=POST&itag=22',
+                    timeout=5) as resp:
+                self.assertEqual(resp.status, 200)
+                self.assertEqual(resp.read(), b'fallback-bytes')
+            self.assertEqual(seen_methods, ['POST', 'GET'])
 
         moq_proxy.stop_server()
 
@@ -869,6 +888,127 @@ class TestMoQProxy(unittest.TestCase):
         bad = [r for r in results if r[1] != 200]
         self.assertEqual(bad, [], f's2 edge flapping: {results}')
         moq_proxy.stop_server()
+
+    def test_instagram_photo_full_size(self):
+        import importlib
+        mod = importlib.import_module('instagram')
+        cls = next(
+            c for n, c in vars(mod).items()
+            if isinstance(c, type) and c.__name__ == 'InstagramResolver'
+        )
+        # Largest by pixel area wins, regardless of order.
+        cands = [{'url': 'https://cdn/u1.jpg', 'width': 640, 'height': 640},
+                 {'url': 'https://cdn/u2.jpg', 'width': 1080, 'height': 1350},
+                 {'url': 'https://cdn/u3.jpg', 'width': 320, 'height': 320}]
+        self.assertEqual(cls._largest_image(cands), 'https://cdn/u2.jpg')
+        self.assertIsNone(cls._largest_image([]))
+        self.assertIsNone(cls._largest_image([{'url': ''}]))
+        # Dimension-less entries fall back to first.
+        self.assertEqual(cls._largest_image([{'url': 'https://cdn/a.jpg'},
+                                             {'url': 'https://cdn/b.jpg'}]),
+                         'https://cdn/a.jpg')
+        # Bare embed URLs: s1080x1350 hint wins over p640x640.
+        self.assertEqual(
+            cls._largest_embed_url(['https://cdn/xp640x640.jpg',
+                                    'https://cdn/xs1080x1350.jpg']),
+            'https://cdn/xs1080x1350.jpg')
+
+        class FakeResp:
+            def __init__(self, payload=None, content=''):
+                self._payload = payload
+                self._content = content
+
+            @property
+            def json(self):
+                return self._payload
+
+            @property
+            def content(self):
+                return self._content
+
+        def make_inst(payload=None, html=''):
+            inst = cls()
+
+            class FakeNet:
+                def http_POST(self, url, form_data=None, headers=None, **kwargs):
+                    return FakeResp(payload=payload)
+
+                def http_GET(self, url, headers=None, **kwargs):
+                    return FakeResp(content=html)
+
+            inst.net = FakeNet()
+            return inst
+
+        # Photo post via GraphQL returns the largest candidate.
+        photo = {'media_type': 1,
+                 'image_versions2': {'candidates': cands},
+                 'user': {'username': 'u'}}
+        inst = make_inst(payload={'data': {'xdt_api__v1__media__shortcode__web_info':
+                                           {'items': [photo]}}})
+        resolved = inst.get_media_url('instagram.com', 'AbC123-_xY', cookies={'sessionid': 's'})
+        self.assertEqual(resolved, 'https://cdn/u2.jpg')
+
+    def test_instagram_carousel_select_dialog(self):
+        import importlib
+        from unittest import mock
+        from resolveurl.resolver import ResolverError
+        mod = importlib.import_module('instagram')
+        cls = next(
+            c for n, c in vars(mod).items()
+            if isinstance(c, type) and c.__name__ == 'InstagramResolver'
+        )
+        node = {
+            'media_type': 8,
+            'carousel_media': [
+                {'media_type': 2,
+                 'video_versions': [{'url': 'https://cdn/v1.mp4'}],
+                 'image_versions2': {'candidates': [{'url': 'https://cdn/v1.jpg'}]}},
+                {'media_type': 1,
+                 'image_versions2': {'candidates': [
+                     {'url': 'https://cdn/p640.jpg', 'width': 640, 'height': 640},
+                     {'url': 'https://cdn/p1080.jpg', 'width': 1080, 'height': 1350}]}},
+            ],
+        }
+        items = cls._collect_media(node)
+        # Videos first, then photos at full size with small thumbs.
+        self.assertEqual([it['url'] for it in items],
+                         ['https://cdn/v1.mp4', 'https://cdn/p1080.jpg'])
+        self.assertEqual(items[0]['thumb'], 'https://cdn/v1.jpg')
+        self.assertEqual(items[1]['thumb'], 'https://cdn/p640.jpg')
+        self.assertEqual(items[1]['label'], 'Photo 2 (1080x1350)')
+
+        seen = {}
+
+        class SpyDialog:
+            def __init__(self, *a, **k):
+                pass
+
+            def select(self, heading, lists, **kwargs):
+                seen['heading'] = heading
+                seen['useDetails'] = kwargs.get('useDetails')
+                seen['labels'] = [li.label for li in lists]
+                seen['thumbs'] = [li.art.get('thumb') for li in lists]
+                return 1
+
+        with mock.patch.object(mod.xbmcgui, 'Dialog', SpyDialog):
+            chosen = cls._choose_media(items)
+        self.assertEqual(chosen['url'], 'https://cdn/p1080.jpg')
+        self.assertTrue(seen['useDetails'])
+        self.assertEqual(seen['thumbs'], ['https://cdn/v1.jpg', 'https://cdn/p640.jpg'])
+
+        class CancelDialog(SpyDialog):
+            def select(self, heading, lists, **kwargs):
+                return -1
+
+        with mock.patch.object(mod.xbmcgui, 'Dialog', CancelDialog):
+            with self.assertRaises(ResolverError):
+                cls._choose_media(items)
+
+        # Single item never touches the dialog.
+        with mock.patch.object(mod.xbmcgui, 'Dialog') as dialog_mock:
+            chosen = cls._choose_media(items[:1])
+        dialog_mock.assert_not_called()
+        self.assertEqual(chosen['url'], 'https://cdn/v1.mp4')
 
     def test_no_legacy_shims(self):
         with open(os.path.join(conftest.REPO_ROOT, 'resources', 'lib', 'moq_proxy.py'), encoding='utf-8') as f:
