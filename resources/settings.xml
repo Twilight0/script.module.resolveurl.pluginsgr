@@ -164,14 +164,13 @@
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="instagram_cookies" type="path" label="Instagram session cookies" help="Path to a cookies file exported from a logged-in browser (Netscape format, or JSON), or a raw Cookie header string. Instagram blocks anonymous access to most posts, so this is usually required.">
+				<setting id="instagram_cookies" type="string" label="Instagram session cookies" help="Path to a cookies file exported from a logged-in browser (Netscape or JSON format), or a raw Cookie header string. Instagram blocks anonymous access to most posts, so this is usually required.">
 					<level>0</level>
 					<default></default>
 					<constraints>
 						<allowempty>true</allowempty>
-						<writable>true</writable>
 					</constraints>
-					<control type="edit" format="path">
+					<control type="edit">
 						<heading>Instagram session cookies</heading>
 					</control>
 				</setting>

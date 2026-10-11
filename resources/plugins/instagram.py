@@ -19,6 +19,7 @@
 import json
 import os
 import re
+import sys
 from resolveurl.resolver import ResolveUrl, ResolverError
 
 try:
@@ -137,7 +138,7 @@ _LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 if _LIB_DIR not in sys.path:
     sys.path.insert(0, _LIB_DIR)
 
-from plugin_settings import get_bool, get_setting, plugin_enabled
+from plugin_settings import get_setting, plugin_enabled
 
 class InstagramResolver(ResolveUrl):
     name = 'Instagram'

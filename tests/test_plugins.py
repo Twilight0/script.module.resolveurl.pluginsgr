@@ -294,5 +294,68 @@ class TestPluginsGR(unittest.TestCase):
         sel.assert_not_called()
 
 
+    def test_settings_xml_schema(self):
+            """Guard the settings.xml against shapes Kodi silently rejects.
+
+            Kodi logs 'error reading <control> tag' and then drops the whole
+            setting when an attribute/element is invalid -- the addon keeps
+            working but that option never appears in the UI. Python tests
+            cannot see this, so validate the structure explicitly.
+            """
+            import xml.etree.ElementTree as ET
+
+            settings = os.path.join(conftest.REPO_ROOT, 'resources', 'settings.xml')
+            root = ET.parse(settings).getroot()
+
+            valid_control_types = {
+                'button', 'edit', 'list', 'slider', 'color', 'radio',
+                'spin', 'label', 'group', 'toggle',
+            }
+            # Kodi parses 'format' on <control> but only honours these values;
+            # anything else (e.g. 'path') makes it discard the <control> tag.
+            valid_formats = {'string', 'integer', 'number', 'boolean', 'float'}
+
+            ids = []
+            for setting in root.iter('setting'):
+                sid = setting.get('id')
+                self.assertTrue(sid, '<setting> without an id')
+                ids.append(sid)
+
+                controls = setting.findall('control')
+                self.assertTrue(controls, f'setting {sid} has no <control>')
+
+                for control in controls:
+                    ctype = control.get('type')
+                    self.assertIn(
+                        ctype, valid_control_types,
+                        f'setting {sid}: unknown control type {ctype!r}')
+                    fmt = control.get('format')
+                    if fmt is not None:
+                        self.assertIn(
+                            fmt, valid_formats,
+                            f'setting {sid}: Kodi rejects format={fmt!r} on '
+                            f'<control> and drops the whole control tag')
+
+                # A list control must carry options to be usable.
+                for control in controls:
+                    if control.get('type') == 'list':
+                        options = setting.findall('.//option')
+                        self.assertTrue(
+                            options, f'setting {sid}: list control has no <option>')
+
+            dupes = {i for i in ids if ids.count(i) > 1}
+            self.assertEqual(sorted(dupes), [], 'duplicate setting ids')
+
+            # Defaults must match the type they are stored as.
+            for setting in root.iter('setting'):
+                sid, stype = setting.get('id'), setting.get('type')
+                default = setting.find('default')
+                if default is None or stype != 'integer':
+                    continue
+                self.assertIsNotNone(
+                    re.match(r'^-?\d+$', (default.text or '').strip()),
+                    f'setting {sid}: integer setting has non-integer default')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
