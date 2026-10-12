@@ -63,7 +63,17 @@ class MegaTVResolver(ResolveUrl):
             lb_url = f"https://lb.cdn.vindral.com/api/v4/connect?channelId={channel_id}"
             json_data = self.net.http_GET(lb_url, headers=headers).content
             lb_json = json.loads(json_data)
-            edge = lb_json.get('edges')[0]
+            edges = lb_json.get('edges')
+            if not edges:
+                raise ResolverError('No edges found in Vindral response.')
+            edge = edges[0]
+            if isinstance(edge, dict):
+                # API v4 now returns objects: {"moqWsUrl": "wss://...", "moqUrl": "https://..."}
+                edge = edge.get('moqWsUrl') or edge.get('moqUrl') or ''
+                if edge.startswith('https://'):
+                    edge = 'wss://' + edge[len('https://'):]
+            if not edge:
+                raise ResolverError('No edge URL found in Vindral response.')
             url = ''.join(
                 [
                     edge, '/subscribe?channelId=', channel_id,

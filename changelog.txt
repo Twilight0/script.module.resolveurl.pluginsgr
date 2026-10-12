@@ -1,3 +1,12 @@
+Version 0.3.4 (October 12th, 2026)
+- Added novasports plugin: resolves on-demand videos from novasports.gr across
+  all four providers the site uses (Kwik, Glomex, FirstView/Connatix, YouTube)
+- Restored ert plugin, reworked for the OpenTV/Nagra backend: resolves
+  ertflix.gr hash and path style links (movies, episodes, series, live TV)
+  plus direct worker links, with enable/disable toggle
+- Fixed megatv live and vindral resolvers for the new load balancer
+  response shape (edge objects with moqWsUrl/moqUrl)
+
 Version 0.3.X (October 12th, 2026)
 - Improved youtube plugin by adding visionos client
 - Added plugin toggles to set their enabled state

@@ -97,12 +97,17 @@
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
+				<setting id="Ert_enabled" type="boolean" label="30076" help="30077">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
 				<setting id="EltubeResolver_enabled" type="boolean" label="30028" help="30029">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="EuronewsGRResolver_enabled" type="boolean" label="30030" help="30031">
+				<setting id="EuronewsResolver_enabled" type="boolean" label="30030" help="30031">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>
@@ -133,6 +138,11 @@
 					<control type="toggle"/>
 				</setting>
 				<setting id="MegaTVResolver_enabled" type="boolean" label="30042" help="30043">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="NovasportsResolver_enabled" type="boolean" label="30074" help="30075">
 					<level>0</level>
 					<default>true</default>
 					<control type="toggle"/>

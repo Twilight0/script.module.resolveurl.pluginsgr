@@ -305,3 +305,19 @@ msgstr "Πάντα το πρώτο στοιχείο"
 msgctxt "#30072"
 msgid "Always highest quality"
 msgstr "Πάντα η υψηλότερη ποιότητα"
+
+msgctxt "#30074"
+msgid "Novasports"
+msgstr "Novasports"
+
+msgctxt "#30075"
+msgid "Resolves on-demand videos from novasports.gr (Kwik, Glomex, FirstView/Connatix and YouTube hosted clips)."
+msgstr "Επιλύει βίντεο on demand από το novasports.gr (Kwik, Glomex, FirstView/Connatix και YouTube)."
+
+msgctxt "#30076"
+msgid "ERT"
+msgstr "ΕΡΤ"
+
+msgctxt "#30077"
+msgid "Enable or disable the ERT resolver (ertflix.gr live, movies, series and worker links)."
+msgstr "Ενεργοποίηση ή απενεργοποίηση του ERT resolver (ζωντανά, ταινίες, σειρές ertflix.gr και σύνδεσμοι worker)."

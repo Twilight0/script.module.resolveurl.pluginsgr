@@ -71,6 +71,7 @@ class TestPluginsGR(unittest.TestCase):
             'ant1gr': 'https://www.antenna.gr/watch/12345/some-title',
             'bigbang': 'https://www.bigbang.gr/movie.asp?id=1',
             'dailymotion': 'https://www.dailymotion.com/video/x7tgad0',
+            'ert': 'https://www.ertflix.gr/#/details/ERT_M002339',
             'euronews': 'https://gr.euronews.com/api/live/data?locale=el',
             'grnet': 'https://diavlos-cache.cnt.grnet.gr/app/index.html#/el/embed/room/6015',
             'ioniantv': 'https://ioniantv.gr/live',
@@ -107,6 +108,27 @@ class TestPluginsGR(unittest.TestCase):
             self.assertIsNotNone(m, f"Star pattern failed for {url}")
             host, media_id = m.groups()[:2]
             self.assertEqual(media_id.rstrip('/'), 'tv/live-stream')
+
+    def test_ert_patterns(self):
+        """Verify ERT resolver matches hash and path style details/live URLs."""
+        resolver_cls = self._get_resolver_class('ert')
+        inst = resolver_cls()
+        urls = [
+            'https://www.ertflix.gr/#/details/ERT_M002339',
+            'https://www.ertflix.gr/details/ERT_M002339',
+            'https://www.ertflix.gr/#/details/ERT_PS058510_E0/point/ERT_PS058511/ERT_PS058511-0001',
+            'https://www.ertflix.gr/#/details/ERT_PS058510',
+            'https://www.ertflix.gr/#/liveTV/ERT_ERT1',
+            'https://ertflix-worker.twilight0.workers.dev/watch/movie/ERT_M002339',
+            'https://ertflix-worker.twilight0.workers.dev/watch/episode/ERT_PS058511-0001',
+            'https://ertflix-worker.twilight0.workers.dev/watch/live/ERT_ERT1',
+            'https://ertflix-worker.twilight0.workers.dev/watch/catchup/ERT_ERT1/1791280800/1791284400',
+        ]
+        for url in urls:
+            m = re.search(inst.pattern, url)
+            self.assertIsNotNone(m, f"ERT pattern failed for {url}")
+            host, media_id = m.groups()[:2]
+            self.assertIn(host, ('ertflix.gr', 'www.ertflix.gr', 'ertflix-worker.twilight0.workers.dev'))
 
     def test_rik_live_and_vod_patterns(self):
         """Verify RIK resolver matches both live channels and VOD episodes."""

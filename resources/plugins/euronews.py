@@ -23,9 +23,9 @@ if _LIB_DIR not in sys.path:
 
 from plugin_settings import plugin_enabled
 
-class EuronewsGRResolver(ResolveUrl):
+class EuronewsResolver(ResolveUrl):
 
-    name = 'EuronewsGR'
+    name = 'Euronews'
     domains = ['euronews.com', 'fr.euronews.com', 'de.euronews.com',
                'es.euronews.com', 'it.euronews.com', 'pt.euronews.com',
                'tr.euronews.com', 'gr.euronews.com']
@@ -88,4 +88,4 @@ class EuronewsGRResolver(ResolveUrl):
 
     @classmethod
     def _is_enabled(cls):
-        return plugin_enabled('EuronewsGRResolver')
+        return plugin_enabled('EuronewsResolver')
