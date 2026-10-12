@@ -31,9 +31,10 @@ class Ert(ResolveUrl):
     domains = ['ertflix.gr', 'www.ertflix.gr', 'ertflix-worker.twilight0.workers.dev']
     pattern = (
         r'//((?:www\.)?ertflix\.gr|ertflix-worker\.twilight0\.workers\.dev)'
-        r'/(?:#\/)?(details\/[\w\-]+(?:\/point\/[\w\-]+\/[\w\-]+)?'
+        r'/(?:#\/)?(details\/[\w\-]+(?:\/(?:point\/[\w\-]+\/|play\/)[\w\-]+)?'
         r'|liveTV\/[\w\-]+'
-        r'|watch\/(?:movie|episode|live)\/[\w\-]+'
+        r'|watch\/(?:movie|episode|live|series)\/[\w\-]+'
+        r'|watch\/series\/[\w\-]+\/(?:season\/\d+\/)?episode\/\d+'
         r'|watch\/catchup\/[\w\-]+\/\d+\/\d+)'
     )
 
@@ -140,6 +141,62 @@ class Ert(ResolveUrl):
 
         return stcu_template.replace('{startTime}', fmt(start)).replace('{endTime}', fmt(end))
 
+    def _episode_by_numbers(self, series_ref, season_num, ep_num, token):
+
+        if series_ref.endswith('_E0'):
+            series_ref = series_ref[:-3]
+
+        seasons = self._api_get(
+            'metadata/delivery/ERT/vod/series',
+            {
+                'filter': json.dumps(
+                    {'seriesRef': series_ref, 'locale': 'el_GR'}, separators=(',', ':')
+                ),
+                'sort': '[["SeasonNumberNumeric", 1]]', 'offset': 0, 'limit': 300
+            },
+            token=token
+        ).get('series', [])
+
+        if not seasons:
+            raise ResolverError('No seasons found for series: {0}'.format(series_ref))
+
+        if season_num is None:
+            season = seasons[0]
+        else:
+            season = next(
+                (s for s in seasons
+                 if str(s.get('SeasonNumberNumeric', s.get('SeasonNumber'))) == str(season_num)),
+                None
+            )
+            if season is None:
+                raise ResolverError(
+                    'No season {0} for series: {1}'.format(season_num, series_ref)
+                )
+
+        episodes = self._api_get(
+            'metadata/delivery/v2/ERT/vod/editorials',
+            {
+                'filter': json.dumps(
+                    {'editorial.seasonRef': season.get('id'), 'locale': 'el_GR'},
+                    separators=(',', ':')
+                ),
+                'sort': '[["editorial.episodeNumber", 1]]', 'offset': 0, 'limit': 300
+            },
+            token=token
+        ).get('editorials', [])
+
+        episode = next(
+            (e for e in episodes
+             if str(e.get('EpisodeNumber', e.get('episodeNumber'))) == str(ep_num)),
+            None
+        )
+        if episode is None:
+            raise ResolverError(
+                'No episode {0} in season {1}'.format(ep_num, season.get('SeasonNumber'))
+            )
+
+        return episode.get('id')
+
     def _first_episode(self, series_ref, token):
 
         seasons = self._api_get(
@@ -186,6 +243,14 @@ class Ert(ResolveUrl):
                     parts = ['details', parts[2]]
                 elif len(parts) == 3 and parts[1] == 'live':
                     parts = ['liveTV', parts[2]]
+                elif len(parts) == 3 and parts[1] == 'series':
+                    parts = ['details', parts[2]]
+                elif len(parts) == 5 and parts[1] == 'series' and parts[3] == 'episode':
+                    episode_id = self._episode_by_numbers(parts[2], None, parts[4], token)
+                    parts = ['details', 'x', 'play', episode_id]
+                elif len(parts) == 7 and parts[1] == 'series' and parts[3] == 'season' and parts[5] == 'episode':
+                    episode_id = self._episode_by_numbers(parts[2], parts[4], parts[6], token)
+                    parts = ['details', 'x', 'play', episode_id]
                 elif len(parts) == 5 and parts[1] == 'catchup':
                     channel = parts[2]
                     stream_url, drm_id, stcu = self._live_channel(channel, token)
@@ -218,6 +283,16 @@ class Ert(ResolveUrl):
 
             elif parts[0] == 'details' and len(parts) == 5 and parts[2] == 'point':
                 episode_id = parts[4]
+                card = self._api_get(
+                    'metadata/v1/vod/{0}/mediacard'.format(episode_id),
+                    {'deviceType': 'SmartTV'}, token=token
+                )
+                stream_url, drm_id = self._pick_media(card.get('media'))
+                if not stream_url:
+                    raise ResolverError('No playable stream for episode: {0}'.format(episode_id))
+
+            elif parts[0] == 'details' and len(parts) == 4 and parts[2] == 'play':
+                episode_id = parts[3]
                 card = self._api_get(
                     'metadata/v1/vod/{0}/mediacard'.format(episode_id),
                     {'deviceType': 'SmartTV'}, token=token
