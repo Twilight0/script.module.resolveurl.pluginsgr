@@ -177,6 +177,88 @@ class TestPluginsGR(unittest.TestCase):
                 delegated.assert_called_once_with('dQw4w9WgXcQ', True)
                 self.assertEqual(resolved, ('https://yt/videoplayback', {}))
 
+    def test_skai_url_patterns(self):
+        """Skai resolver matches live, episode, show/trailer and both domains."""
+        resolver_cls = self._get_resolver_class('skai')
+        inst = resolver_cls()
+        urls = [
+            'https://www.skai.gr/tv/live',
+            'https://www.skai.gr/tv/episode/enimerosi/simera/2026-10-15-06',
+            'https://www.skai.gr/tv/show/psuchagogia/movietime-3/to-tsakali',
+            'https://www.skaitv.gr/tv/live',
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                m = re.search(inst.pattern, url)
+                self.assertIsNotNone(m, f"Skai pattern failed for {url}")
+                host, media_id = m.groups()[:2]
+                self.assertIn(host, ('skai.gr', 'skaitv.gr'))
+                self.assertTrue(media_id.startswith('tv/'))
+                self.assertEqual(
+                    inst.get_url(host, media_id),
+                    'https://www.{0}/{1}'.format(host, media_id))
+
+    def test_skai_episode_extraction(self):
+        """Episode pages resolve episode[0] through the videostream player."""
+        from unittest import mock
+
+        import skai
+
+        page = ('<html><script>var data = {"episode": [{"media_item_file": '
+                '"1media/enimerosi/ekpompes/simera20261015.mp4"}]};</script></html>')
+        inst = skai.SkaiResolver()
+
+        class FakeResp:
+            content = page
+
+        with mock.patch.object(inst.net, 'http_GET', return_value=FakeResp()):
+            resolved = inst.get_media_url('skai.gr', 'tv/episode/enimerosi/simera/2026-10-15-06')
+
+        self.assertIn('simera20261015.mp4/chunklink.m3u8', resolved)
+
+    def test_skai_trailer_extraction(self):
+        """Show pages resolve episodes[0] trailers instead of raising KeyError."""
+        from unittest import mock
+
+        import skai
+
+        page = ('<html><script>var data = {"show": {"title": "MOVIETIME"}, '
+                '"episodes": [{"media_item_file": "202502/video/TO_TSAKALI_SE.mp4"}]};'
+                '</script></html>')
+        inst = skai.SkaiResolver()
+
+        class FakeResp:
+            content = page
+
+        with mock.patch.object(inst.net, 'http_GET', return_value=FakeResp()):
+            resolved = inst.get_media_url(
+                'skai.gr', 'tv/show/psuchagogia/movietime-3/to-tsakali')
+
+        self.assertIn('TO_TSAKALI_SE.mp4/chunklink.m3u8', resolved)
+
+    def test_skai_vod_youtube_delegation(self):
+        """Skai pages without a player file delegate to YouTubeGR, never the youtube addon."""
+        from unittest import mock
+
+        import skai
+
+        page = ('<html><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ">'
+                '</iframe></html>')
+        inst = skai.SkaiResolver()
+
+        class FakeResp:
+            content = page
+
+        with mock.patch.object(inst.net, 'http_GET', return_value=FakeResp()), \
+                mock.patch.object(
+                    skai.SkaiResolver, '_resolve_youtube',
+                    return_value='https://yt/videoplayback') as delegated:
+            resolved = inst.get_media_url(
+                'skai.gr', 'tv/show/psuchagogia/movietime-3/to-tsakali')
+
+        delegated.assert_called_once_with('dQw4w9WgXcQ')
+        self.assertEqual(resolved, 'https://yt/videoplayback')
+
     def test_ert_patterns(self):
         """Verify ERT resolver matches hash and path style details/live URLs."""
         resolver_cls = self._get_resolver_class('ert')
