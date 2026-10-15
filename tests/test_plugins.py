@@ -109,6 +109,74 @@ class TestPluginsGR(unittest.TestCase):
             host, media_id = m.groups()[:2]
             self.assertEqual(media_id.rstrip('/'), 'tv/live-stream')
 
+    def test_star_vod_patterns(self):
+        """Verify Star resolver matches the rebuilt site's /video/ page URLs."""
+        resolver_cls = self._get_resolver_class('star')
+        inst = resolver_cls()
+        urls = [
+            'https://www.star.gr/video/cash-or-trash/730515/cash-or-trash-15102026',
+            'https://www.star.gr/video/eidiseis/ellada/730245/kypselh-blabes-se-20-ktiria',
+            'https://www.star.gr/video/cash-or-trash',
+        ]
+        for url in urls:
+            m = re.search(inst.pattern, url)
+            self.assertIsNotNone(m, f"Star pattern failed for {url}")
+
+    def test_star_vod_kwik_extraction(self):
+        """Verify Star VOD resolves the kwik playerConfig m3u8 and follows its redirect."""
+        from unittest import mock
+
+        import star
+
+        page = (
+            '<script>(function () { const playerConfig = { IsLiveStream: false,'
+            ' mediaid: "Npl5pN9gYTAKlTd8UAkp2A", sources: [ {'
+            ' file: "https://deliver2.siliconweb.com/kwik/star.m3u8?key=Npl5pN9gYTAKlTd8UAkp2A"'
+            ' } ] }; })();</script>'
+        )
+        inst = star.StarResolver()
+
+        class FakeResp:
+            content = page
+
+            def get_redirect_url(self):
+                return ('https://starmotionvod.siliconweb.com/starvod/smil:itwfcdn/'
+                        'starmotionvod/2858445-572Z2G5FhNhN4KP-v-1.smil/playlist.m3u8')
+
+        with mock.patch.object(inst.net, 'http_GET', return_value=FakeResp()):
+            resolved = inst.get_media_url('star.gr', 'video/cash-or-trash/730515/x')
+
+        self.assertIn('playlist.m3u8', resolved)
+
+    def test_star_vod_youtube_delegation(self):
+        """Star YouTube clips delegate to YouTubeGR, novasports-style, never the youtube addon."""
+        from unittest import mock
+
+        import star
+
+        pages = {
+            'iframe': ('<html><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ">'
+                       '</iframe><iframe src="https://x.grxchange.gr/videoad/30277"></iframe></html>'),
+            'legacy': '<html><div data-video="dQw4w9WgXcQ"></div></html>',
+        }
+
+        for name, page in pages.items():
+            with self.subTest(page=name):
+                inst = star.StarResolver()
+
+                class FakeResp:
+                    content = page
+
+                with mock.patch.object(inst.net, 'http_GET', return_value=FakeResp()), \
+                        mock.patch.object(
+                            star.StarResolver, '_resolve_youtube',
+                            return_value=('https://yt/videoplayback', {})) as delegated:
+                    resolved = inst.get_media_url(
+                        'star.gr', 'tv/psychagogia/old-show/old-clip', subs=True)
+
+                delegated.assert_called_once_with('dQw4w9WgXcQ', True)
+                self.assertEqual(resolved, ('https://yt/videoplayback', {}))
+
     def test_ert_patterns(self):
         """Verify ERT resolver matches hash and path style details/live URLs."""
         resolver_cls = self._get_resolver_class('ert')
