@@ -26,7 +26,7 @@ class SkaiResolver(ResolveUrl):
 
     name = 'skai'
     domains = ['skai.gr', 'skaitv.gr']
-    pattern = r'(?://|\.)(skai(?:tv)?\.gr)/((?:tv/(?:live|episode|show|videos))(?:/?|/[\w\-=/]+))'
+    pattern = r'(?://|\.)(skai(?:tv)?\.gr)/((?:tv/(?:live|episode|show|videos))[\w\-=/.%]*)'
     player_url = 'https://videostream.skai.gr/skaivod/_definst_/mp4:skai/'
 
     def get_media_url(self, host, media_id):

@@ -183,6 +183,7 @@ class TestPluginsGR(unittest.TestCase):
         inst = resolver_cls()
         urls = [
             'https://www.skai.gr/tv/live',
+            'https://www.skai.gr/tv/live/',
             'https://www.skai.gr/tv/episode/enimerosi/simera/2026-10-15-06',
             'https://www.skai.gr/tv/show/psuchagogia/movietime-3/to-tsakali',
             'https://www.skaitv.gr/tv/live',

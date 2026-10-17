@@ -1,3 +1,6 @@
+Version 0.3.8 (October 17th, 2026)
+- Update skaigr
+
 Version 0.3.6 &amp; 0.3.7 (October 15th, 2026)
 - Update stargr plugin
 - Update skaigr plugin
