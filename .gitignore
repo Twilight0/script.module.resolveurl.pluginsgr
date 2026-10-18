@@ -5,4 +5,4 @@ __pycache__/
 
 # Standalone engine settings written at runtime by tests/resolves
 config.json
-ytresolver/
+/ytresolver/
