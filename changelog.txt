@@ -1,3 +1,6 @@
+Version 0.3.9 (October 18th, 2026)
+- Mega plugin: match every video URL shape the site serves (ftv/fltv/ktvshows, megasports and goldenclassics videos, show pages, trailing-slash-less links)
+
 Version 0.3.8 (October 17th, 2026)
 - Update skaigr
 
